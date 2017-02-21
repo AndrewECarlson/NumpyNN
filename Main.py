@@ -21,54 +21,64 @@ warnings.filterwarnings("ignore")
 class MLP_Neural_Network:
     # TODO generalize this to allow any number of layers
 
-    def __init__(self,input, hidden, output):
-        self.input = input
-        self.hidden = hidden
-        self.output = output
-
-        # shape of weights should be (number of nodes in next layer, num nodes in current layer +1)
-        self.theta_1 = np.random.randn(self.hidden, self.input+1)             # first col is bias weight
-        self.theta_2 = np.random.randn(self.output, self.hidden+1)             # first col is bias weight
-
-        # Initialize/declare activations and check shapes are all compatible
-        self.a1 = np.zeros((self.input+1,1))
-
-        self.a2 = np.matmul(self.theta_1, self.a1)
-        # add bias neuron
-        temp = self.a2
-        self.a2 = np.ones((self.hidden + 1, 1))
-        self.a2[1:] = temp
-
-        #calculate a3
-
-        self.a3 = np.matmul(self.theta_2, self.a2)
+    def __init__(self,*args):
+        self.layers = args
+        self.theta = []
+        self.a = []
 
 
-    def feed_forward(self, input,t1=None,t2=None):
+        # # shape of weights should be (number of nodes in next layer, num nodes in current layer +1)
+        # first column is the bias weight
+        for i in range(len(self.layers)-1):
+            self.theta.append(np.random.randn(self.layers[i+1], self.layers[i]+1))
 
-        if t1==None or t2 == None:
-            t1 = self.theta_1
-            t2 = self.theta_2
 
-        # put input into a1 with bias neuron
-        self.a1 = np.ones((self.input+1, 1))
-        self.a1[1:] = input.reshape((self.input, 1))
+        # dry run of feed forward to initialize self.a and check shapes are correct
+        self.a.append(np.zeros((self.layers[0]+1,1)))
+        for i in range(1,len(self.layers)):
+            temp = np.matmul(self.theta[i-1], self.a[i-1])
+            temp = sigmoid(temp)
+            a = np.ones((self.layers[i]+1, 1))
+            a[1:] = temp
+            self.a.append(a)
 
-        # calculate a2
-        self.a2 = np.matmul(t1, self.a1)
-        self.a2 = sigmoid(self.a2)
 
-        # add bias neuron
-        temp = self.a2
-        self.a2 = np.ones((self.hidden + 1, 1))
-        self.a2[1:] = temp
+        # self.theta_1 = np.random.randn(self.hidden, self.input+1)             # first col is bias weight
+        # self.theta_2 = np.random.randn(self.output, self.hidden+1)             # first col is bias weight
+        #
+        # # Initialize/declare activations and check shapes are all compatible
+        # self.a1 = np.zeros((self.input+1,1))
+        #
+        # self.a2 = np.matmul(self.theta_1, self.a1)
+        # # add bias neuron
+        # temp = self.a2
+        # self.a2 = np.ones((self.hidden + 1, 1))
+        # self.a2[1:] = temp
+        #
+        # #calculate a3
+        #
+        # self.a3 = np.matmul(self.theta_2, self.a2)
 
-        # calculate a3
-        self.a3 = np.matmul(t2, self.a2)
-        self.a3 = sigmoid(self.a3)
 
-        return self.a3
-    feed_forward_vec = np.vectorize(feed_forward)
+    def feed_forward(self, x, theta = None):
+        # allow use of alternative weights for gradient checking
+        if theta == None:
+            theta = self.theta
+
+        # initialize a0 with x to begin forward propagation
+        self.a[0] = np.ones(self.a[0].shape)
+        self.a[0][1:] = x.reshape((self.layers[0], 1))
+        # same code used to initialize self.a
+        for i in range(1,len(self.layers)):
+            # calculate activations for current layer
+            temp = np.matmul(self.theta[i-1], self.a[i-1])
+            temp = sigmoid(temp)
+            # add bias neuron
+            a = np.ones((self.layers[i]+1, 1))
+            a[1:] = temp
+            self.a[i] = a
+        # return last actiation layer excluding the bias neuron
+        return self.a[-1][1:]
 
     def cost(self,regularization_term, input, expected_output,theta1=None,theta2= None):
         if theta1 is None:
