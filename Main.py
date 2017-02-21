@@ -13,7 +13,6 @@ from scipy.optimize import check_grad
 
 
 from scipy.special import expit as sigmoid #ignore unresolved error
-from scipy.stats import logistic as sigmoid2
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -229,12 +228,12 @@ if __name__ == "__main__":
 
 
     #print(check_grad(nn.cost,nn.backprop,test_inputs[0],test_labels[0]))
-    nn.backprop(test_inputs[0],test_labels[0],.001,.00001)
+   # nn.backprop(test_inputs[0],test_labels[0],.001,.00001)
 
    # print(nn.feed_forward(test_inputs[0]))
 
     #nn.train(300,test_inputs, test_labels,.001,.01)
-   # print("feed forward results. should be 0", nn.feed_forward(np.array([0,0,0,1])))
+    print("feed forward results. should be 0", nn.feed_forward(np.array([0,0,0,1])))
 
 
    # print(nn.test(testdata.drop('y', axis=1).as_matrix(),testdata['y'].as_matrix()))

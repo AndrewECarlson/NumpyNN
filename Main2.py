@@ -11,6 +11,10 @@ import math
 import pandas as pd
 from scipy.optimize import check_grad
 
+"""
+saving my simple 3 layer version in a easy to refer to way
+"""
+
 
 from scipy.special import expit as sigmoid #ignore unresolved error
 from scipy.stats import logistic as sigmoid2
@@ -71,7 +75,7 @@ class MLP_Neural_Network:
         return self.a3
     feed_forward_vec = np.vectorize(feed_forward)
 
-    def cost(self, input, expected_output,theta1=None,theta2= None):
+    def cost(self,regularization_term, input, expected_output,theta1=None,theta2= None):
         if theta1 is None:
             theta1 = self.theta_1
         if theta2 is None:
@@ -89,52 +93,55 @@ class MLP_Neural_Network:
         o_weights = np.square(self.theta_2)
         h_weights = np.sum(h_weights)
         o_weights = np.sum(o_weights)
-        cost = np.add(np.add(cost,h_weights),o_weights)
+
+        weights = np.add(h_weights,o_weights)
+        weights = weights*regularization_term/2
+        cost = np.add(cost,weights)
 
 
         return cost
 
-    def grad_check(self, input, expected_output,epsilon):
+    def grad_check(self, input, expected_output,epsilon, regularization_term):
+        dtheta1 = np.zeros(self.theta_1.shape).flatten()
+        dtheta2 = np.zeros(self.theta_2.shape).flatten()
 
-        theta1min = self.theta_1.flatten()
-        theta1max = self.theta_1.flatten()
-        theta2min = self.theta_2.flatten()
-        theta2max = self.theta_2.flatten()
-        dtheta1 = np.zeros(shape=self.theta_1.shape).flatten()
-        dtheta2 = np.zeros(shape=self.theta_2.shape).flatten()
-
-        for i in range(len(theta1min)+len(theta2min)):
-
-
-            if i < len(theta1max):
-                theta1min[i] = theta1min[i] - epsilon
-                theta1max[i] = theta1max[i] + epsilon
-
-            else:
-                theta2min[i-len(theta1max)] = theta2min[i-len(theta1max)] - epsilon
-                theta2max[i-len(theta1min)] = theta2max[i-len(theta1max)] + epsilon
-
-            theta2minmat = theta2min.reshape(self.theta_2.shape)
-            theta2maxmat = theta2max.reshape(self.theta_2.shape)
-            theta1minmat = theta1min.reshape(self.theta_1.shape)
-            theta1maxmat = theta1max.reshape(self.theta_1.shape)
-
-            cost_high = self.cost(input,expected_output,theta1maxmat,theta2maxmat)
-
-            cost_low = self.cost(input,expected_output,theta1minmat, theta2minmat)
-            if i < len(theta1min):
+        for i in range(len(dtheta1)+len(dtheta2)):
+            if i < len(dtheta1):
+                flat_theta1min = self.theta_1.flatten()
+                flat_theta1max = self.theta_1.flatten()
+                flat_theta1min[i] -= epsilon
+                flat_theta1max[i] += epsilon
+                theta1min = flat_theta1min.reshape(self.theta_1.shape)
+                theta1max = flat_theta1max.reshape(self.theta_1.shape)
+                cost_high = self.cost(regularization_term,input,expected_output,theta1max,self.theta_2)
+                cost_low = self.cost(regularization_term,input,expected_output,theta1min,self.theta_2)
                 dtheta1[i] = (cost_high - cost_low)/(2*epsilon)
             else:
-                dtheta2[i-len(theta1min)] = (cost_high - cost_low)/(2*epsilon)
+                j = i-len(dtheta1)
+
+
+                flat_theta2min = self.theta_2.flatten()
+                flat_theta2max = self.theta_2.flatten()
+                flat_theta2min[j] -= epsilon
+                flat_theta2max[j] += epsilon
+                theta2min = flat_theta2min.reshape(self.theta_2.shape)
+                theta2max = flat_theta2max.reshape(self.theta_2.shape)
+                cost_high = self.cost(regularization_term,input,expected_output,self.theta_1,theta2max)
+                cost_low = self.cost(regularization_term,input,expected_output,self.theta_1,theta2min)
+                dtheta2[j] = (cost_high - cost_low)/(2*epsilon)
+
 
         dtheta1 = dtheta1.reshape(self.theta_1.shape)
         dtheta2 = dtheta2.reshape(self.theta_2.shape)
 
+
         return dtheta1,dtheta2
 
 
+
+
+
     def backprop(self, input, expected, learning_rate= .001, regularization_term = .0001):
-        #TODO run gradient checking. though it does appear to be working
 
         d3 = np.subtract(self.feed_forward(input), expected.reshape((self.output,1)))
 
@@ -160,7 +167,7 @@ class MLP_Neural_Network:
 
 
         #run gradient checking
-        gradAppx1,gradAppx2 = self.grad_check(input,expected,.00001)
+        gradAppx1,gradAppx2 = self.grad_check(input,expected,.0001,regularization_term)
 
         diff1 = delta_1 - gradAppx1
         # diff1 = np.square(diff1)
@@ -170,11 +177,11 @@ class MLP_Neural_Network:
         # diff2 = np.square(diff2)
         # diff2 = np.sum(diff2)
 
+
+        print("diff between descent and appx for theta 1\n",diff1)
+        print("diff between descent and appx for theta 2\n",diff2)
+
         #
-        # print("diff between descent and appx for theta 1\n",diff1)
-        # print("diff between descent and appx for theta 2\n",diff2)
-
-
         #Update Weights
         self.theta_2 = np.subtract(self.theta_2, np.dot(learning_rate, delta_2))
         self.theta_1 = np.subtract(self.theta_1, np.dot(learning_rate, delta_1))
@@ -184,11 +191,11 @@ class MLP_Neural_Network:
         for j in range(epochs):
             for i in range(len(inputs)):
                 self.backprop(inputs[i],expected_outputs[i],learning_rate,regularization_term)
-            if j % 10 ==0:
+            if j % 50 == 0:
 
                 cost = 0
                 for i in range(len(inputs)):
-                    cost = cost+ self.cost(inputs[i],expected_outputs[i])
+                    cost += self.cost(regularization_term, inputs[i], expected_outputs[i])
                 cost /= len(inputs)
                 print("{0} accuracy: {1} cost: {2}".format(j, self.test(inputs, expected_outputs), cost))
 
@@ -226,11 +233,12 @@ if __name__ == "__main__":
 
 
     #print(check_grad(nn.cost,nn.backprop,test_inputs[0],test_labels[0]))
-   # nn.backprop(test_inputs[0],test_labels[0],.001,.01)
+   # nn.backprop(test_inputs[0],test_labels[0],.001,.00001)
 
    # print(nn.feed_forward(test_inputs[0]))
 
-    nn.train(1000,test_inputs, test_labels,.001,.01)
+    #nn.train(300,test_inputs, test_labels,.001,.01)
+    print("feed forward results. should be 0", nn.feed_forward(np.array([0,0,0,1])))
 
 
    # print(nn.test(testdata.drop('y', axis=1).as_matrix(),testdata['y'].as_matrix()))
