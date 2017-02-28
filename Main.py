@@ -32,7 +32,6 @@ class MLP_Neural_Network:
         for i in range(len(self.layers)-1):
             self.theta.append(np.random.randn(self.layers[i+1], self.layers[i]+1))
 
-
         # dry run of feed forward to initialize self.a and check shapes are correct
         self.a.append(np.zeros((self.layers[0]+1,1)))
         for i in range(1,len(self.layers)):
@@ -80,6 +79,9 @@ class MLP_Neural_Network:
         # return last actiation layer excluding the bias neuron
         return self.a[-1][1:]
 
+
+    # todo update cost function to flexible layers
+
     def cost(self,regularization_term, input, expected_output,theta1=None,theta2= None):
         if theta1 is None:
             theta1 = self.theta_1
@@ -105,7 +107,7 @@ class MLP_Neural_Network:
 
 
         return cost
-
+    # todo  update grad checking for flexible layers
     def grad_check(self, input, expected_output,epsilon, regularization_term):
         dtheta1 = np.zeros(self.theta_1.shape).flatten()
         dtheta2 = np.zeros(self.theta_2.shape).flatten()
@@ -142,67 +144,59 @@ class MLP_Neural_Network:
 
         return dtheta1,dtheta2
 
+    def backprop(self, x, y, learning_rate= .001, regularization_term = .0001):
+
+        # create array d to help build delta.
+        d = [0 for x in range(len(self.theta))]
+        delta = [0 for x in range(len(self.theta))]
+
+        self.feed_forward(x)
+        temp = y
+        y = np.ones(self.a[-1].shape)
+        y[1:] = temp.reshape((self.layers[-1], 1))
+        d[-1] = np.subtract(self.a[-1],y)
+        # -1  is because the last value is hardcoded above and the inputs dont contribute any error to the next layer
+        # so with  the zero being exclusive it is not iterated over
+        for i in range(len(self.theta)-1,0,-1):
+
+            temp = np.matmul(self.theta[i].T, d[i][1:])   #remove d for bias term
+            gz = np.multiply(self.a[i], 1-self.a[i])
+            d[i-1] = np.multiply(temp, gz)
+
+        for i in range(len(d)):
+            delta[i] = np.matmul(d[i],self.a[i].T)[1:]    # calculate delta and remove bias layer because bias nodes have
+                                                        #   no weights feeding into them to update
 
 
 
 
-    def backprop(self, input, expected, learning_rate= .001, regularization_term = .0001):
-
-        d3 = np.subtract(self.feed_forward(input), expected.reshape((self.output,1)))
-
-        d2 = np.matmul(self.theta_2.T,d3)
-        gz = np.multiply(self.a2,1-self.a2)
-        d2 = np.multiply(d2,gz)
-
-        # calculate derivative of cost function, apparently there is a proof to show this is equal to it
-
-        delta_2 = np.matmul(d3,self.a2.T)
-        delta_1 = np.matmul(d2, self.a1.T)[1:]              # getting rid of bias neuron because there is no weight
-                                                            # feeding into it to update
-
-
-        # calculate and add regularization terms without regularizing bias neuron
-        regularization = (np.dot(regularization_term, self.theta_2[:, 1:]))
-        delta_2[:, 1:] = np.add(delta_2[:, 1:],regularization)
-
-
-        regularization = (np.dot(regularization_term, self.theta_1[:, 1:]))
-
-        delta_1[:, 1:] = np.add(delta_1[:, 1:], regularization)
-
-
-        #run gradient checking
-        gradAppx1,gradAppx2 = self.grad_check(input,expected,.0001,regularization_term)
-
-        diff1 = delta_1 - gradAppx1
-        # diff1 = np.square(diff1)
-        # diff1 = np.sum(diff1)
-
-        diff2 = delta_2 - gradAppx2
-        # diff2 = np.square(diff2)
-        # diff2 = np.sum(diff2)
-
-
-        print("diff between descent and appx for theta 1\n",diff1)
-        print("diff between descent and appx for theta 2\n",diff2)
-
+        # # calculate and add regularization terms without regularizing bias neuron
+        # regularization = (np.dot(regularization_term, self.theta_2[:, 1:]))
+        # delta_2[:, 1:] = np.add(delta_2[:, 1:],regularization)
         #
-        #Update Weights
-        self.theta_2 = np.subtract(self.theta_2, np.dot(learning_rate, delta_2))
-        self.theta_1 = np.subtract(self.theta_1, np.dot(learning_rate, delta_1))
-        return delta_2
+        for i in range(len(self.theta)):
+            regularization = (np.multiply(regularization_term, self.theta[i][:, 1:]))
+            delta[i][:, 1:] = np.add(delta[i][:, 1:], regularization)
+
+        for i in range(len(self.theta)):
+            self.theta[i] = np.subtract(self.theta[i], np.multiply(learning_rate,delta[i]))
+        # #Update Weights
+        # self.theta_2 = np.subtract(self.theta_2, np.dot(learning_rate, delta_2))
+        # self.theta_1 = np.subtract(self.theta_1, np.dot(learning_rate, delta_1))
+        # return delta_2
 
     def train(self, epochs, inputs, expected_outputs, learning_rate, regularization_term):
         for j in range(epochs):
             for i in range(len(inputs)):
                 self.backprop(inputs[i],expected_outputs[i],learning_rate,regularization_term)
-            if j % 50 == 0:
-
-                cost = 0
-                for i in range(len(inputs)):
-                    cost += self.cost(regularization_term, inputs[i], expected_outputs[i])
-                cost /= len(inputs)
-                print("{0} accuracy: {1} cost: {2}".format(j, self.test(inputs, expected_outputs), cost))
+            if j % 1 == 0:
+                print("epoch done:", j)
+            #
+            #     cost = 0
+            #     for i in range(len(inputs)):
+            #         cost += self.cost(regularization_term, inputs[i], expected_outputs[i])
+            #     cost /= len(inputs)
+            #     print("{0} accuracy: {1} cost: {2}".format(j, self.test(inputs, expected_outputs), cost))
 
     def test(self, inputs, expected_outputs):
         """
@@ -223,7 +217,7 @@ class MLP_Neural_Network:
 
 if __name__ == "__main__":
     #create Network
-    nn = MLP_Neural_Network(4, 2, 1)
+    nn = MLP_Neural_Network(4,6,2, 1)
 
     # set up training and test data
     data = pd.read_csv("testdata.txt")
@@ -238,11 +232,11 @@ if __name__ == "__main__":
 
 
     #print(check_grad(nn.cost,nn.backprop,test_inputs[0],test_labels[0]))
-   # nn.backprop(test_inputs[0],test_labels[0],.001,.00001)
+    nn.backprop(test_inputs[0],test_labels[0],.001,.00001)
 
    # print(nn.feed_forward(test_inputs[0]))
 
-    #nn.train(300,test_inputs, test_labels,.001,.01)
+    nn.train(1000,test_inputs, test_labels,.001,.01)
     print("feed forward results. should be 0", nn.feed_forward(np.array([0,0,0,1])))
 
 
