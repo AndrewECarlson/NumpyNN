@@ -82,29 +82,25 @@ class MLP_Neural_Network:
 
     # todo update cost function to flexible layers
 
-    def cost(self,regularization_term, input, expected_output,theta1=None,theta2= None):
-        if theta1 is None:
-            theta1 = self.theta_1
-        if theta2 is None:
-            theta2 = self.theta_2
+    def cost(self,regularization_term, input, expected_output,theta=None):
+        if theta is None:
+            theta = self.theta
 
-        prediction = self.feed_forward(input,theta1,theta2)
+        prediction = self.feed_forward(input,theta)
         cost = 0
-
-        for k in range(self.output):
+        for k in range(self.layers[-1]):
             if prediction == 0:
                 prediction = 0.000000000000000001
             cost = cost + -1 * expected_output * math.log(prediction) - (1 - expected_output) * math.log(1 - prediction)
 
-        h_weights = np.square(self.theta_1)
-        o_weights = np.square(self.theta_2)
-        h_weights = np.sum(h_weights)
-        o_weights = np.sum(o_weights)
-
-        weights = np.add(h_weights,o_weights)
-        weights = weights*regularization_term/2
+        # calculate regularization term
+        weights = 0
+        for weight in self.theta:
+            squares = np.square(weight)
+            squares = np.sum(squares)
+            weights += squares
+        weights *= regularization_term/2
         cost = np.add(cost,weights)
-
 
         return cost
     # todo  update grad checking for flexible layers
@@ -167,9 +163,6 @@ class MLP_Neural_Network:
             delta[i] = np.matmul(d[i],self.a[i].T)[1:]    # calculate delta and remove bias layer because bias nodes have
                                                         #   no weights feeding into them to update
 
-
-
-
         # # calculate and add regularization terms without regularizing bias neuron
         # regularization = (np.dot(regularization_term, self.theta_2[:, 1:]))
         # delta_2[:, 1:] = np.add(delta_2[:, 1:],regularization)
@@ -180,17 +173,14 @@ class MLP_Neural_Network:
 
         for i in range(len(self.theta)):
             self.theta[i] = np.subtract(self.theta[i], np.multiply(learning_rate,delta[i]))
-        # #Update Weights
-        # self.theta_2 = np.subtract(self.theta_2, np.dot(learning_rate, delta_2))
-        # self.theta_1 = np.subtract(self.theta_1, np.dot(learning_rate, delta_1))
-        # return delta_2
 
-    def train(self, epochs, inputs, expected_outputs, learning_rate, regularization_term):
+    def train(self, epochs, inputs, expected_outputs, learning_rate = .01, regularization_term=.0001):
         for j in range(epochs):
             for i in range(len(inputs)):
                 self.backprop(inputs[i],expected_outputs[i],learning_rate,regularization_term)
-            if j % 1 == 0:
+            if j % 500 == 0:
                 print("epoch done:", j)
+                print("feed forward results. should be 0", nn.feed_forward(np.array([0,0,0,1])))
             #
             #     cost = 0
             #     for i in range(len(inputs)):
@@ -232,11 +222,11 @@ if __name__ == "__main__":
 
 
     #print(check_grad(nn.cost,nn.backprop,test_inputs[0],test_labels[0]))
-    nn.backprop(test_inputs[0],test_labels[0],.001,.00001)
+    nn.backprop(test_inputs[0],test_labels[0],.01,.0001)
 
    # print(nn.feed_forward(test_inputs[0]))
 
-    nn.train(1000,test_inputs, test_labels,.001,.01)
+    nn.train(10000,test_inputs, test_labels,.001,.01)
     print("feed forward results. should be 0", nn.feed_forward(np.array([0,0,0,1])))
 
 
