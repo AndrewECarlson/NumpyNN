@@ -79,9 +79,6 @@ class MLP_Neural_Network:
         # return last actiation layer excluding the bias neuron
         return self.a[-1][1:]
 
-
-    # todo update cost function to flexible layers
-
     def cost(self,regularization_term, input, expected_output,theta=None):
         if theta is None:
             theta = self.theta
