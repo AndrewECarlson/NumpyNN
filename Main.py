@@ -27,6 +27,7 @@ class MLP_Neural_Network:
         self.a = []
 
 
+
         # # shape of weights should be (number of nodes in next layer, num nodes in current layer +1)
         # first column is the bias weight
         for i in range(len(self.layers)-1):
@@ -79,7 +80,7 @@ class MLP_Neural_Network:
         # return last actiation layer excluding the bias neuron
         return self.a[-1][1:]
 
-    def cost(self,regularization_term, input, expected_output,theta=None):
+    def cost(self, regularization_term, input, expected_output,theta=None):
         if theta is None:
             theta = self.theta
 
@@ -96,46 +97,40 @@ class MLP_Neural_Network:
             squares = np.square(weight)
             squares = np.sum(squares)
             weights += squares
-        weights *= regularization_term/2
+        weights = weights * regularization_term/2
         cost = np.add(cost,weights)
 
         return cost
     # todo  update grad checking for flexible layers
-    def grad_check(self, input, expected_output,epsilon, regularization_term):
-        dtheta1 = np.zeros(self.theta_1.shape).flatten()
-        dtheta2 = np.zeros(self.theta_2.shape).flatten()
-
-        for i in range(len(dtheta1)+len(dtheta2)):
-            if i < len(dtheta1):
-                flat_theta1min = self.theta_1.flatten()
-                flat_theta1max = self.theta_1.flatten()
-                flat_theta1min[i] -= epsilon
-                flat_theta1max[i] += epsilon
-                theta1min = flat_theta1min.reshape(self.theta_1.shape)
-                theta1max = flat_theta1max.reshape(self.theta_1.shape)
-                cost_high = self.cost(regularization_term,input,expected_output,theta1max,self.theta_2)
-                cost_low = self.cost(regularization_term,input,expected_output,theta1min,self.theta_2)
-                dtheta1[i] = (cost_high - cost_low)/(2*epsilon)
-            else:
-                j = i-len(dtheta1)
-
-
-                flat_theta2min = self.theta_2.flatten()
-                flat_theta2max = self.theta_2.flatten()
-                flat_theta2min[j] -= epsilon
-                flat_theta2max[j] += epsilon
-                theta2min = flat_theta2min.reshape(self.theta_2.shape)
-                theta2max = flat_theta2max.reshape(self.theta_2.shape)
-                cost_high = self.cost(regularization_term,input,expected_output,self.theta_1,theta2max)
-                cost_low = self.cost(regularization_term,input,expected_output,self.theta_1,theta2min)
-                dtheta2[j] = (cost_high - cost_low)/(2*epsilon)
-
-
-        dtheta1 = dtheta1.reshape(self.theta_1.shape)
-        dtheta2 = dtheta2.reshape(self.theta_2.shape)
-
-
-        return dtheta1,dtheta2
+    # def grad_check(self, input, expected_output,epsilon, regularization_term):
+    #
+    #
+    #     for layer in self.theta:
+    #         flatlayermin = layer.flatten
+    #
+    #         for i in range(len(layer)):
+    #
+    #
+    #     #     else:
+        #         j = i-len(dtheta1)
+        #
+        #
+        #         flat_theta2min = self.theta_2.flatten()
+        #         flat_theta2max = self.theta_2.flatten()
+        #         flat_theta2min[j] -= epsilon
+        #         flat_theta2max[j] += epsilon
+        #         theta2min = flat_theta2min.reshape(self.theta_2.shape)
+        #         theta2max = flat_theta2max.reshape(self.theta_2.shape)
+        #         cost_high = self.cost(regularization_term,input,expected_output,self.theta_1,theta2max)
+        #         cost_low = self.cost(regularization_term,input,expected_output,self.theta_1,theta2min)
+        #         dtheta2[j] = (cost_high - cost_low)/(2*epsilon)
+        #
+        #
+        # dtheta1 = dtheta1.reshape(self.theta_1.shape)
+        # dtheta2 = dtheta2.reshape(self.theta_2.shape)
+        #
+        #
+        # return dtheta1,dtheta2
 
     def backprop(self, x, y, learning_rate= .001, regularization_term = .0001):
 
@@ -178,12 +173,12 @@ class MLP_Neural_Network:
             if j % 500 == 0:
                 print("epoch done:", j)
                 print("feed forward results. should be 0", nn.feed_forward(np.array([0,0,0,1])))
-            #
-            #     cost = 0
-            #     for i in range(len(inputs)):
-            #         cost += self.cost(regularization_term, inputs[i], expected_outputs[i])
-            #     cost /= len(inputs)
-            #     print("{0} accuracy: {1} cost: {2}".format(j, self.test(inputs, expected_outputs), cost))
+
+                cost = 0
+                for i in range(len(inputs)):
+                    cost += self.cost(regularization_term, inputs[i], expected_outputs[i])
+                cost /= len(inputs)
+                print("{0} accuracy: {1} cost: {2}".format(j, self.test(inputs, expected_outputs), cost))
 
     def test(self, inputs, expected_outputs):
         """
